@@ -1,0 +1,20 @@
+# OS files
+.DS_Store
+
+# Editor files
+.vscode/
+
+# Environment secrets
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.log
+
+# Build files
+dist/
+build/
+
+# Dependencies
+node_modules/
