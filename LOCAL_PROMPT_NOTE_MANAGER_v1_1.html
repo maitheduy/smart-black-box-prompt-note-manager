@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hệ thống Quản lý Prompt & Harnessing (Duymt Framework)</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Markdown & Sanitizer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+  <!-- KaTeX for Math -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #f3f4f6; --bg-card: #ffffff; --text-primary: #1f2937; 
+      --text-secondary: #6b7280; --border-color: #e5e7eb; --accent: #4f46e5;
+      --shadow-3d: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    [data-theme="dark"] {
+      --bg-primary: #111827; --bg-card: #1f2937; --text-primary: #f9fafb; 
+      --text-secondary: #9ca3af; --border-color: #374151; --accent: #818cf8;
+      --shadow-3d: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3), 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    body { background-color: var(--bg-primary); color: var(--text-primary); transition: background-color 0.3s ease, color 0.3s ease; }
+    .card-3d {
+      background-color: var(--bg-card); border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-3d); border-radius: 0.75rem; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card-3d:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1); }
+    .btn-primary { background-color: var(--accent); color: white; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    
+    /* Toast - ĐÃ SỬA: dùng class .show rõ ràng */
+    #toast { 
+      position: fixed; bottom: 20px; right: 20px; 
+      transform: translateX(calc(100% + 30px)); 
+      transition: transform 0.3s ease; 
+      z-index: 100; 
+      max-width: 400px;
+    }
+    #toast.show { transform: translateX(0); }
+
+    /* Modal */
+    .modal-overlay { 
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+      backdrop-filter: blur(2px); 
+      display: flex; align-items: center; justify-content: center; 
+      z-index: 50; 
+      opacity: 0; pointer-events: none; transition: opacity 0.2s; 
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-content { 
+      background: var(--bg-card); padding: 2rem; border-radius: 1rem; 
+      max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto;
+      box-shadow: var(--shadow-3d); transform: scale(0.95); transition: transform 0.2s; 
+    }
+    .modal-overlay.active .modal-content { transform: scale(1); }
+
+    /* Print Optimization */
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .card-3d { box-shadow: none !important; border: 1px solid black !important; background: white !important; margin-bottom: 1rem; break-inside: avoid; }
+      .prose { max-height: none !important; overflow: visible !important; }
+    }
+
+    /* Markdown Styling */
+    .prose h1, .prose h2, .prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: var(--text-primary); }
+    .prose code { background: rgba(0,0,0,0.08); padding: 0.2em 0.4em; border-radius: 0.25rem; font-size: 0.9em; font-family: monospace; }
+    .prose pre { background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; border: 1px solid var(--border-color); }
+    [data-theme="dark"] .prose code, [data-theme="dark"] .prose pre { background: rgba(255,255,255,0.1); }
+    
+    /* Collapsible Content */
+    .content-collapsed { max-height: 4.5rem; overflow: hidden; position: relative; }
+    .content-collapsed::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2rem;
+      background: linear-gradient(transparent, var(--bg-card));
+    }
+
+    /* Input focus */
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6 no-print">
+      <div>
+        <h1 class="text-3xl font-bold" style="color: var(--accent);">🧠 Prompt Harnessing System</h1>
+        <p class="text-sm mt-1" style="color: var(--text-secondary);">Cấu trúc hóa tư duy & Tối ưu hóa tương tác AI</p>
+      </div>
+      <button id="theme-toggle-btn" class="p-2 rounded-full border hover:bg-gray-100 dark:hover:bg-gray-800 transition" style="border-color: var(--border-color);" title="Đổi theme">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
+
+    <!-- Input Area -->
+    <div class="card-3d p-6 mb-6 no-print">
+      <!-- Template Quick Select -->
+      <div class="mb-4 flex items-center gap-2">
+        <span class="text-sm font-semibold whitespace-nowrap">⚡ Khung mẫu:</span>
+        <select id="templateSelect" class="flex-1 p-2 rounded border text-sm" style="background: var(--bg-primary); border-color: var(--border-color);">
+          <option value="">-- Chọn khung tư duy có sẵn --</option>
+          <option value="math">📐 Khung Giải toán (Deconstruction)</option>
+          <option value="policy">📊 Khung Phân tích Chính sách (QA Analysis)</option>
+          <option value="metaphor">🎭 Khung Ẩn dụ Đa tầng (Sư phạm Duymt)</option>
+        </select>
+        <button id="apply-template-btn" class="btn-primary px-4 py-2 rounded text-sm font-semibold">Áp dụng</button>
+      </div>
+
+      <!-- Grid Inputs -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div class="flex items-center gap-2">
+          <input id="title" type="text" placeholder="Tiêu đề Prompt" class="flex-1 p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);" />
+          <button id="mic-title" class="mic-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition" title="Nhập bằng giọng nói">🎤</button>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <input id="category" type="text" placeholder="Thư mục (VD: Toán, AI)" class="flex-1 p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);" list="category-suggestions" />
+          <datalist id="category-suggestions"></datalist>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input id="hashtags" type="text" placeholder="Hashtags (VD: #gemini, toán)" class="flex-1 p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);" list="hashtag-suggestions" />
+          <datalist id="hashtag-suggestions"></datalist>
+        </div>
+
+        <button id="save-btn" class="btn-primary px-4 py-2 rounded font-semibold flex items-center justify-center gap-2 shadow-md">💾 Lưu Prompt</button>
+      </div>
+
+      <!-- Content Area -->
+      <div class="flex items-start gap-2 mb-4">
+        <textarea id="content" rows="4" placeholder="Nội dung (Hỗ trợ Markdown, LaTeX $x^2$, Biến {{context}})..." class="flex-1 p-3 rounded border resize-y" style="background: var(--bg-primary); border-color: var(--border-color);"></textarea>
+        <button id="mic-content" class="mic-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition mt-1" title="Nhập bằng giọng nói">🎤</button>
+      </div>
+      
+      <!-- Action Bar -->
+      <div class="flex flex-wrap gap-3 items-center pt-4 border-t" style="border-color: var(--border-color);">
+        <input id="search" type="text" placeholder="🔍 Tìm kiếm..." class="flex-1 min-w-[200px] p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);" />
+        
+        <select id="categoryFilter" class="p-2 rounded border min-w-[160px]" style="background: var(--bg-primary); border-color: var(--border-color);">
+          <option value="">📂 Tất cả thư mục</option>
+        </select>
+
+        <select id="viewMode" class="p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);">
+          <option value="grouped">Theo Nhóm</option>
+          <option value="all">Tất cả</option>
+        </select>
+        
+        <div class="flex gap-2 ml-auto">
+          <button id="export-btn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition">⬇️ Xuất</button>
+          <label class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded text-sm font-medium cursor-pointer transition">
+            ⬆️ Nhập
+            <input type="file" id="importFile" class="hidden" accept=".json" />
+          </label>
+          <button id="delete-category-btn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm font-medium transition">🗑️ Xoá Nhóm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt List -->
+    <div id="promptList" class="space-y-6"></div>
+    
+    <!-- Pagination -->
+    <div id="pagination" class="mt-8 flex justify-center gap-2 no-print"></div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="card-3d px-6 py-3 font-semibold"></div>
+
+  <!-- Voice Status -->
+  <div id="voice-status" class="fixed bottom-4 left-4 text-sm italic px-3 py-1 rounded bg-gray-800 text-white opacity-0 transition-opacity duration-300 pointer-events-none"></div>
+
+  <script>
+    // ============================================================
+    // KHỞI TẠO AN TOÀN - Bọc toàn bộ để tránh crash nếu CDN lỗi
+    // ============================================================
+    (function() {
+      'use strict';
+
+      // --- STATE MANAGEMENT ---
+      let prompts = [];
+      let currentPage = 1;
+      const itemsPerPage = 6;
+      let recognition = null;
+      let isRecording = false;
+      let currentMicTarget = null;
+      let searchTimeout = null;
+
+      // Load dữ liệu từ localStorage (có try-catch)
+      try {
+        const saved = localStorage.getItem("prompts_v3");
+        prompts = saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error("Lỗi load localStorage:", e);
+        prompts = [];
+      }
+
+      // --- TEMPLATES ---
+      const TEMPLATES = {
+        math: `**Vai trò:** Bạn là một trợ lý toán học theo Phương pháp Sư phạm Duymt.\n**Nhiệm vụ:** Phân tích và giải bài toán sau: {{bai_toan}}\n**Cấu trúc yêu cầu:**\n1. **Phân rã:** Chia nhỏ bài toán thành các thành phần cơ bản.\n2. **Ẩn dụ:** Sử dụng một ẩn dụ trực quan để giải thích bản chất.\n3. **Lời giải:** Trình bày từng bước logic, có sử dụng LaTeX.\n4. **Mở rộng:** Đề xuất một biến thể của bài toán.`,
+        policy: `**Vai trò:** Chuyên gia phân tích chính sách giáo dục.\n**Bối cảnh:** {{boi_canh}}\n**Nhiệm vụ:** Phân tích tài liệu: {{noi_dung}}\n**Yêu cầu đầu ra:**\n- Executive Summary\n- System Analysis\n- Data & Risk Matrix\n- Strategic Recommendations`,
+        metaphor: `**Mục tiêu:** Tạo cặp ẩn dụ đối xứng cho khái niệm: {{khai_niem}}\n**Đối tượng:** {{doi_tuong_hoc}}\n**Yêu cầu:**\n1. Ẩn dụ gắn với khung tham chiếu sống động.\n2. Chỉ ra điểm tương đồng cấu trúc.\n3. Cảnh báo giới hạn của ẩn dụ.`
+      };
+
+      // --- HÀM TIỆN ÍCH ---
+      function $(id) { return document.getElementById(id); }
+      
+      function safeParseMarkdown(text) {
+        try {
+          if (typeof marked !== 'undefined' && marked.parse) {
+            const raw = marked.parse(text);
+            if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
+              return DOMPurify.sanitize(raw);
+            }
+            return raw;
+          }
+        } catch (e) {
+          console.error("Lỗi parse markdown:", e);
+        }
+        return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      function safeSanitize(text) {
+        try {
+          if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
+            return DOMPurify.sanitize(text);
+          }
+        } catch (e) {}
+        return String(text).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      // --- TOAST (ĐÃ SỬA LỖI) ---
+      function showToast(msg, type) {
+        type = type || 'success';
+        const toast = $('toast');
+        if (!toast) return;
+        toast.innerHTML = (type === 'error' ? '⚠️ ' : '✅ ') + safeSanitize(msg);
+        toast.style.color = type === 'error' ? '#dc2626' : '#16a34a';
+        toast.style.borderLeft = type === 'error' ? '4px solid #dc2626' : '4px solid #16a34a';
+        toast.classList.add('show');
+        setTimeout(function() {
+          toast.classList.remove('show');
+        }, 3000);
+      }
+
+      // --- MODAL ---
+      function showModal(title, contentHtml, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML = `
+          <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4" style="color: var(--accent);">${safeSanitize(title)}</h3>
+            <div class="mb-6 text-sm leading-relaxed">${contentHtml}</div>
+            <div class="flex justify-end gap-3">
+              <button class="modal-cancel px-4 py-2 rounded border hover:bg-gray-100 dark:hover:bg-gray-700 transition" style="border-color: var(--border-color);">Huỷ</button>
+              <button class="modal-confirm btn-primary px-4 py-2 rounded shadow-md">Xác nhận</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // Trigger animation
+        setTimeout(function() { overlay.classList.add('active'); }, 10);
+        
+        const close = function() {
+          overlay.classList.remove('active');
+          setTimeout(function() { 
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          }, 200);
+        };
+        
+        overlay.querySelector('.modal-cancel').addEventListener('click', close);
+        overlay.querySelector('.modal-confirm').addEventListener('click', function() {
+          if (typeof onConfirm === 'function') {
+            try { onConfirm(overlay); } catch (e) { console.error(e); }
+          }
+          close();
+        });
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) close();
+        });
+      }
+
+      // --- THEME ---
+      function loadTheme() {
+        const theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        const icon = $('theme-icon');
+        if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+      }
+      
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        const icon = $('theme-icon');
+        if (icon) icon.textContent = next === 'dark' ? '☀️' : '🌙';
+        showToast('Đã chuyển sang theme ' + (next === 'dark' ? 'tối' : 'sáng'));
+      }
+
+      // --- DATA OPERATIONS ---
+      function saveToStorage() {
+        try {
+          localStorage.setItem("prompts_v3", JSON.stringify(prompts));
+        } catch (e) {
+          showToast('Lỗi lưu dữ liệu: ' + e.message, 'error');
+        }
+      }
+
+      function applyTemplate() {
+        const select = $('templateSelect');
+        const key = select ? select.value : '';
+        if (!key || !TEMPLATES[key]) {
+          showToast('Vui lòng chọn một khung mẫu!', 'error');
+          return;
+        }
+        const contentEl = $('content');
+        if (contentEl) {
+          contentEl.value = TEMPLATES[key];
+          contentEl.focus();
+        }
+        if (select) select.value = "";
+        showToast('Đã áp dụng khung tư duy! Hãy điền các biến {{...}}');
+      }
+
+      function savePrompt() {
+        const titleEl = $('title');
+        const contentEl = $('content');
+        const categoryEl = $('category');
+        const hashtagsEl = $('hashtags');
+        
+        if (!titleEl || !contentEl || !categoryEl || !hashtagsEl) return;
+        
+        const title = titleEl.value.trim();
+        const content = contentEl.value.trim();
+        const category = categoryEl.value.trim() || 'Uncategorized';
+        const rawHashtags = hashtagsEl.value;
+        const hashtags = rawHashtags.split(/[,#\s]+/).map(function(t) { return t.trim(); }).filter(function(t) { return t; });
+        
+        if (!title || !content) {
+          showToast('Vui lòng nhập Tiêu đề và Nội dung!', 'error');
+          return;
+        }
+
+        const editId = titleEl.dataset.editId;
+        const now = new Date().toISOString();
+
+        if (editId) {
+          const idx = prompts.findIndex(function(p) { return p.id === editId; });
+          if (idx !== -1) {
+            prompts[idx] = Object.assign({}, prompts[idx], { 
+              title: title, content: content, category: category, 
+              hashtags: hashtags, updatedAt: now 
+            });
+          }
+          delete titleEl.dataset.editId;
+          showToast('Đã cập nhật Prompt!');
+        } else {
+          let newId;
+          try {
+            newId = crypto.randomUUID();
+          } catch (e) {
+            newId = 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+          }
+          prompts.unshift({ 
+            id: newId, title: title, content: content, category: category, 
+            hashtags: hashtags, createdAt: now, updatedAt: now 
+          });
+          showToast('Đã thêm Prompt mới!');
+        }
+        
+        clearForm();
+        saveToStorage();
+        updateSuggestions();
+        renderPrompts();
+      }
+
+      function editPrompt(id) {
+        const p = prompts.find(function(x) { return x.id === id; });
+        if (!p) return;
+        const titleEl = $('title');
+        const contentEl = $('content');
+        const categoryEl = $('category');
+        const hashtagsEl = $('hashtags');
+        
+        if (titleEl) titleEl.value = p.title;
+        if (contentEl) contentEl.value = p.content;
+        if (categoryEl) categoryEl.value = p.category;
+        if (hashtagsEl) hashtagsEl.value = (p.hashtags || []).join(', ');
+        if (titleEl) titleEl.dataset.editId = id;
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('Đang chỉnh sửa: ' + p.title);
+      }
+
+      function deletePrompt(id) {
+        showModal('Xác nhận Xoá', '<p class="text-red-500 font-medium">Bạn có chắc muốn xoá prompt này không? Hành động này không thể hoàn tác.</p>', function() {
+          prompts = prompts.filter(function(p) { return p.id !== id; });
+          saveToStorage();
+          updateSuggestions();
+          renderPrompts();
+          showToast('Đã xoá thành công!');
+        });
+      }
+
+      function copyPrompt(id) {
+        const p = prompts.find(function(x) { return x.id === id; });
+        if (!p) return;
+        
+        const regex = /\{\{([^}]+)\}\}/g;
+        const matches = [];
+        let match;
+        while ((match = regex.exec(p.content)) !== null) {
+          matches.push(match);
+        }
+        
+        if (matches.length === 0) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(p.content).then(function() {
+              showToast('Đã sao chép vào clipboard!');
+            }).catch(function() {
+              fallbackCopy(p.content);
+            });
+          } else {
+            fallbackCopy(p.content);
+          }
+          return;
+        }
+
+        let inputsHtml = '<p class="mb-3 text-sm">Prompt này chứa các biến. Hãy điền giá trị:</p>';
+        inputsHtml += matches.map(function(m) {
+          return `
+            <div class="mb-3">
+              <label class="block text-xs font-bold uppercase tracking-wide mb-1" style="color: var(--accent);">${safeSanitize(m[1])}</label>
+              <input type="text" data-var="${safeSanitize(m[1])}" class="var-input w-full p-2 rounded border" style="background: var(--bg-primary); border-color: var(--border-color);" placeholder="Nhập giá trị cho ${safeSanitize(m[1])}..." />
+            </div>
+          `;
+        }).join('');
+
+        showModal('Điền Biến số (Prompt Templating)', inputsHtml, function(modal) {
+          let finalContent = p.content;
+          let allFilled = true;
+          const inputs = modal.querySelectorAll('.var-input');
+          inputs.forEach(function(input) {
+            const varName = input.getAttribute('data-var');
+            const val = input.value.trim();
+            if (!val) allFilled = false;
+            finalContent = finalContent.replace(new RegExp('\\{\\{' + varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\}\\}', 'g'), val || '{{' + varName + '}}');
+          });
+          
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(finalContent).then(function() {
+              showToast(allFilled ? 'Đã sao chép (đã điền đầy đủ biến)!' : 'Đã sao chép (còn biến trống)!');
+            }).catch(function() {
+              fallbackCopy(finalContent);
+            });
+          } else {
+            fallbackCopy(finalContent);
+          }
+        });
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Đã sao chép!');
+        } catch (e) {
+          showToast('Không thể sao chép. Hãy copy thủ công.', 'error');
+        }
+        document.body.removeChild(ta);
+      }
+
+      function clearForm() {
+        const titleEl = $('title');
+        const contentEl = $('content');
+        const categoryEl = $('category');
+        const hashtagsEl = $('hashtags');
+        
+        if (titleEl) { titleEl.value = ''; delete titleEl.dataset.editId; }
+        if (contentEl) contentEl.value = '';
+        if (categoryEl) categoryEl.value = '';
+        if (hashtagsEl) hashtagsEl.value = '';
+      }
+
+      // --- SUGGESTIONS & FILTERS ---
+      function updateSuggestions() {
+        const categories = [];
+        const catSet = new Set();
+        prompts.forEach(function(p) {
+          if (p.category && p.category !== 'Uncategorized' && !catSet.has(p.category)) {
+            catSet.add(p.category);
+            categories.push(p.category);
+          }
+        });
+        
+        const hashSet = new Set();
+        prompts.forEach(function(p) {
+          (p.hashtags || []).forEach(function(h) { hashSet.add(h); });
+        });
+        const allHashtags = Array.from(hashSet);
+        
+        const catDatalist = $('category-suggestions');
+        if (catDatalist) {
+          catDatalist.innerHTML = categories.map(function(c) { return '<option value="' + safeSanitize(c) + '">'; }).join('');
+        }
+        
+        const hashDatalist = $('hashtag-suggestions');
+        if (hashDatalist) {
+          hashDatalist.innerHTML = allHashtags.map(function(h) { return '<option value="' + safeSanitize(h) + '">'; }).join('');
+        }
+        
+        const catFilter = $('categoryFilter');
+        if (catFilter) {
+          const currentVal = catFilter.value;
+          catFilter.innerHTML = '<option value="">📂 Tất cả thư mục</option>' + 
+                                categories.map(function(c) { return '<option value="' + safeSanitize(c) + '">' + safeSanitize(c) + '</option>'; }).join('');
+          catFilter.value = currentVal;
+        }
+      }
+
+      // --- RENDERING ---
+      function handleSearch() { 
+        currentPage = 1; 
+        renderPrompts(); 
+      }
+
+      function debouncedSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(handleSearch, 300);
+      }
+
+      function renderPrompts() {
+        const searchEl = $('search');
+        const categoryFilterEl = $('categoryFilter');
+        const viewModeEl = $('viewMode');
+        const listEl = $('promptList');
+        const pagEl = $('pagination');
+        
+        if (!searchEl || !categoryFilterEl || !viewModeEl || !listEl || !pagEl) return;
+        
+        const search = searchEl.value.toLowerCase();
+        const categoryFilter = categoryFilterEl.value;
+        const viewMode = viewModeEl.value;
+        
+        const filtered = prompts.filter(function(p) {
+          const matchSearch = !search || 
+                              p.title.toLowerCase().indexOf(search) !== -1 || 
+                              p.content.toLowerCase().indexOf(search) !== -1 || 
+                              p.category.toLowerCase().indexOf(search) !== -1 ||
+                              (p.hashtags || []).some(function(h) { return h.toLowerCase().indexOf(search) !== -1; });
+          const matchCategory = !categoryFilter || p.category === categoryFilter;
+          return matchSearch && matchCategory;
+        });
+
+        listEl.innerHTML = '';
+        pagEl.innerHTML = '';
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = '<div class="text-center py-10" style="color: var(--text-secondary);">Không tìm thấy prompt nào phù hợp.</div>';
+          return;
+        }
+
+        if (viewMode === 'all') {
+          const totalPages = Math.ceil(filtered.length / itemsPerPage);
+          const start = (currentPage - 1) * itemsPerPage;
+          const paginated = filtered.slice(start, start + itemsPerPage);
+          paginated.forEach(function(p) { 
+            const card = createPromptCard(p);
+            if (card) listEl.appendChild(card);
+          });
+          renderPagination(totalPages);
+        } else {
+          const groups = {};
+          filtered.forEach(function(p) {
+            if (!groups[p.category]) groups[p.category] = [];
+            groups[p.category].push(p);
+          });
+          
+          const cats = Object.keys(groups).sort();
+          const totalPages = Math.ceil(cats.length / 3);
+          const start = (currentPage - 1) * 3;
+          const paginatedCats = cats.slice(start, start + 3);
+          
+          paginatedCats.forEach(function(cat) {
+            const catDiv = document.createElement('div');
+            catDiv.className = 'mb-6';
+            const count = groups[cat].length;
+            catDiv.innerHTML = '<h2 class="text-lg font-bold mb-3 pb-2 border-b flex items-center gap-2" style="color: var(--accent); border-color: var(--border-color);">📂 ' + safeSanitize(cat) + ' <span class="text-xs font-normal px-2 py-0.5 rounded-full" style="background: var(--bg-primary); color: var(--text-secondary);">' + count + '</span></h2>';
+            groups[cat].forEach(function(p) {
+              const card = createPromptCard(p);
+              if (card) catDiv.appendChild(card);
+            });
+            listEl.appendChild(catDiv);
+          });
+          renderPagination(totalPages);
+        }
+        
+        // Render Math (KaTeX)
+        if (typeof renderMathInElement === 'function') {
+          try {
+            renderMathInElement(listEl, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+              ],
+              throwOnError: false
+            });
+          } catch (e) {
+            console.error("Lỗi render KaTeX:", e);
+          }
+        }
+      }
+
+      function createPromptCard(p) {
+        if (!p || !p.id) return null;
+        
+        const div = document.createElement('div');
+        div.className = 'card-3d p-5 mb-4 relative group';
+        
+        const safeHtml = safeParseMarkdown(p.content);
+        const isLong = p.content.length > 250;
+        const contentId = 'content-' + p.id;
+        
+        const hashtagsHtml = (p.hashtags || []).map(function(h) {
+          return '<span class="text-xs px-2 py-1 rounded-full mr-1 mb-1 inline-block border" style="border-color: var(--accent); color: var(--accent);">#' + safeSanitize(h) + '</span>';
+        }).join('');
+        
+        const createdAt = p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '';
+        const updatedAt = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('vi-VN') : '';
+        const dateStr = (p.updatedAt && p.createdAt && p.updatedAt !== p.createdAt) 
+          ? 'Cập nhật: ' + updatedAt 
+          : 'Tạo: ' + createdAt;
+
+        div.innerHTML = `
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="text-lg font-bold pr-4">${safeSanitize(p.title)}</h3>
+            <span class="text-xs px-2 py-1 rounded whitespace-nowrap" style="background: var(--bg-primary); color: var(--text-secondary);">📂 ${safeSanitize(p.category)}</span>
+          </div>
+          ${hashtagsHtml ? '<div class="mb-3">' + hashtagsHtml + '</div>' : ''}
+          
+          <div id="${contentId}" class="prose max-w-none mb-4 ${isLong ? 'content-collapsed' : ''}" style="color: var(--text-primary);">
+            ${safeHtml}
+          </div>
+          ${isLong ? '<button class="toggle-expand-btn text-xs font-semibold mb-3 hover:underline flex items-center gap-1" data-target="' + contentId + '" style="color: var(--accent);"><span>👁️ Xem thêm</span></button>' : ''}
+          
+          <div class="flex flex-wrap gap-2 items-center justify-between pt-3 border-t no-print" style="border-color: var(--border-color);">
+            <span class="text-xs italic" style="color: var(--text-secondary);">${dateStr}</span>
+            <div class="flex gap-2">
+              <button class="copy-btn bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition" data-id="${p.id}">📋 Copy</button>
+              <button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium transition" data-id="${p.id}">✏️ Sửa</button>
+              <button class="delete-btn bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition" data-id="${p.id}">🗑️ Xoá</button>
+            </div>
+          </div>
+        `;
+        return div;
+      }
+
+      function toggleExpand(targetId, btn) {
+        const el = $(targetId);
+        if (!el) return;
+        if (el.classList.contains('content-collapsed')) {
+          el.classList.remove('content-collapsed');
+          btn.innerHTML = '<span>🔼 Thu gọn</span>';
+        } else {
+          el.classList.add('content-collapsed');
+          btn.innerHTML = '<span>👁️ Xem thêm</span>';
+        }
+      }
+
+      function renderPagination(totalPages) {
+        const pagEl = $('pagination');
+        if (!pagEl) return;
+        pagEl.innerHTML = '';
+        if (totalPages <= 1) return;
+        
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.textContent = i;
+          btn.className = 'px-3 py-1.5 rounded text-sm font-medium transition';
+          btn.setAttribute('data-page', i);
+          if (i === currentPage) {
+            btn.classList.add('btn-primary', 'shadow-md');
+          } else {
+            btn.style.backgroundColor = 'var(--bg-card)';
+            btn.style.border = '1px solid var(--border-color)';
+          }
+          pagEl.appendChild(btn);
+        }
+      }
+
+      // --- IMPORT / EXPORT ---
+      function exportData() {
+        try {
+          const blob = new Blob([JSON.stringify(prompts, null, 2)], { type: "application/json" });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'prompts_harnessing_backup_' + new Date().toISOString().slice(0,10) + '.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+          showToast('Đã xuất file JSON thành công!');
+        } catch (e) {
+          showToast('Lỗi xuất file: ' + e.message, 'error');
+        }
+      }
+
+      function importData(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) throw new Error("Format không hợp lệ");
+            
+            const existingIds = new Set(prompts.map(function(p) { return p.id; }));
+            const newItems = imported.filter(function(p) { 
+              return p && p.id && !existingIds.has(p.id); 
+            });
+            
+            newItems.forEach(function(p) { 
+              if (!p.updatedAt) p.updatedAt = p.createdAt || new Date().toISOString(); 
+            });
+            
+            prompts = newItems.concat(prompts);
+            saveToStorage();
+            updateSuggestions();
+            renderPrompts();
+            showToast('Đã nhập thành công ' + newItems.length + ' prompt mới!');
+          } catch (err) {
+            showToast('Lỗi file JSON: ' + err.message, 'error');
+          }
+        };
+        reader.onerror = function() {
+          showToast('Lỗi đọc file', 'error');
+        };
+        reader.readAsText(file);
+      }
+
+      function showDeleteCategoryModal() {
+        const catSet = new Set();
+        prompts.forEach(function(p) {
+          if (p.category && p.category !== 'Uncategorized') catSet.add(p.category);
+        });
+        const cats = Array.from(catSet);
+        
+        if (cats.length === 0) {
+          showToast('Chưa có danh mục nào để xoá!', 'error');
+          return;
+        }
+        
+        const options = cats.map(function(c) {
+          const count = prompts.filter(function(p) { return p.category === c; }).length;
+          return '<option value="' + safeSanitize(c) + '">' + safeSanitize(c) + ' (' + count + ' prompt)</option>';
+        }).join('');
+        
+        showModal('Xoá Danh mục', `
+          <select id="del-cat-select" class="w-full p-2 rounded border mb-2" style="background: var(--bg-primary); border-color: var(--border-color);">${options}</select>
+          <p class="text-sm text-red-600 font-medium p-2 rounded" style="background: rgba(220, 38, 38, 0.1);">⚠️ Cảnh báo: Hành động này sẽ xoá vĩnh viễn tất cả prompt trong danh mục này!</p>
+        `, function(modal) {
+          const select = modal.querySelector('#del-cat-select');
+          if (!select) return;
+          const cat = select.value;
+          const count = prompts.filter(function(p) { return p.category === cat; }).length;
+          prompts = prompts.filter(function(p) { return p.category !== cat; });
+          saveToStorage();
+          updateSuggestions();
+          renderPrompts();
+          showToast('Đã xoá ' + count + ' prompt thuộc nhóm "' + cat + '"!');
+        });
+      }
+
+      // --- SPEECH RECOGNITION ---
+      function setupSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          document.querySelectorAll('.mic-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+          });
+          return;
+        }
+        try {
+          recognition = new SpeechRecognition();
+          recognition.lang = 'vi-VN';
+          recognition.continuous = false;
+          recognition.interimResults = false;
+
+          recognition.onstart = function() { 
+            isRecording = true; 
+            if (currentMicTarget) {
+              currentMicTarget.style.backgroundColor = '#ef4444';
+              currentMicTarget.style.color = 'white';
+            }
+            showVoiceStatus('🎤 Đang nghe...'); 
+          };
+          recognition.onend = function() { 
+            isRecording = false; 
+            if (currentMicTarget) {
+              currentMicTarget.style.backgroundColor = '';
+              currentMicTarget.style.color = '';
+            }
+            showVoiceStatus(''); 
+          };
+          recognition.onerror = function(e) { 
+            isRecording = false; 
+            showVoiceStatus('Lỗi: ' + (e.error || 'unknown')); 
+            setTimeout(function() { showVoiceStatus(''); }, 3000);
+          };
+          recognition.onresult = function(e) {
+            if (!e.results || !e.results[0]) return;
+            const text = e.results[0][0].transcript;
+            if (currentMicTarget && currentMicTarget.id === 'mic-title') {
+              const titleEl = $('title');
+              if (titleEl) titleEl.value = text;
+            } else {
+              const contentEl = $('content');
+              if (contentEl) {
+                contentEl.value += (contentEl.value ? ' ' : '') + text;
+              }
+            }
+            showToast('Đã nhận diện giọng nói!');
+          };
+        } catch (e) {
+          console.error("Lỗi khởi tạo SpeechRecognition:", e);
+        }
+      }
+
+      function showVoiceStatus(msg) {
+        const el = $('voice-status');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.opacity = msg ? '1' : '0';
+      }
+
+      // --- EVENT DELEGATION (ĐÃ SỬA - THAY THẾ ONCLICK INLINE) ---
+      function setupEventListeners() {
+        // Theme toggle
+        const themeBtn = $('theme-toggle-btn');
+        if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+        
+        // Template apply
+        const applyBtn = $('apply-template-btn');
+        if (applyBtn) applyBtn.addEventListener('click', applyTemplate);
+        
+        // Save prompt
+        const saveBtn = $('save-btn');
+        if (saveBtn) saveBtn.addEventListener('click', savePrompt);
+        
+        // Search (debounced)
+        const searchEl = $('search');
+        if (searchEl) searchEl.addEventListener('input', debouncedSearch);
+        
+        // Category filter
+        const catFilter = $('categoryFilter');
+        if (catFilter) catFilter.addEventListener('change', handleSearch);
+        
+        // View mode
+        const viewMode = $('viewMode');
+        if (viewMode) viewMode.addEventListener('change', handleSearch);
+        
+        // Export
+        const exportBtn = $('export-btn');
+        if (exportBtn) exportBtn.addEventListener('click', exportData);
+        
+        // Import
+        const importFile = $('importFile');
+        if (importFile) {
+          importFile.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+              importData(e.target.files[0]);
+              e.target.value = '';
+            }
+          });
+        }
+        
+        // Delete category
+        const delCatBtn = $('delete-category-btn');
+        if (delCatBtn) delCatBtn.addEventListener('click', showDeleteCategoryModal);
+        
+        // Mic buttons
+        document.addEventListener('click', function(e) {
+          const micBtn = e.target.closest('.mic-btn');
+          if (micBtn) {
+            currentMicTarget = micBtn;
+            if (!recognition) {
+              showToast('Trình duyệt không hỗ trợ nhận diện giọng nói (Hãy dùng Chrome/Edge).', 'error');
+              return;
+            }
+            if (isRecording) {
+              try { recognition.stop(); } catch (e) {}
+            } else {
+              try { recognition.start(); } 
+              catch (e) { 
+                console.error(e); 
+                showToast('Không thể khởi động mic', 'error'); 
+              }
+            }
+          }
+          
+          // Copy button
+          const copyBtn = e.target.closest('.copy-btn');
+          if (copyBtn) {
+            const id = copyBtn.getAttribute('data-id');
+            if (id) copyPrompt(id);
+          }
+          
+          // Edit button
+          const editBtn = e.target.closest('.edit-btn');
+          if (editBtn) {
+            const id = editBtn.getAttribute('data-id');
+            if (id) editPrompt(id);
+          }
+          
+          // Delete button
+          const deleteBtn = e.target.closest('.delete-btn');
+          if (deleteBtn) {
+            const id = deleteBtn.getAttribute('data-id');
+            if (id) deletePrompt(id);
+          }
+          
+          // Toggle expand
+          const toggleBtn = e.target.closest('.toggle-expand-btn');
+          if (toggleBtn) {
+            const targetId = toggleBtn.getAttribute('data-target');
+            if (targetId) toggleExpand(targetId, toggleBtn);
+          }
+          
+          // Pagination
+          const pageBtn = e.target.closest('[data-page]');
+          if (pageBtn && $('pagination') && $('pagination').contains(pageBtn)) {
+            const page = parseInt(pageBtn.getAttribute('data-page'));
+            if (!isNaN(page)) {
+              currentPage = page;
+              renderPrompts();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }
+        });
+      }
+
+      // --- KHỞI CHẠY ỨNG DỤNG ---
+      function initApp() {
+        loadTheme();
+        setupSpeechRecognition();
+        updateSuggestions();
+        renderPrompts();
+        setupEventListeners();
+        console.log("✅ Prompt Harnessing System đã khởi động thành công!");
+      }
+
+      // Chạy khi DOM sẵn sàng
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+      } else {
+        initApp();
+      }
+
+    })();
+  </script>
+</body>
+</html>
