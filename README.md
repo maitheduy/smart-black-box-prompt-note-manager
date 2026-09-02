@@ -1,6 +1,5 @@
 # 🧠 Smart Black Box #01
 
-# 🧠 Smart Black Box #01
 
 ## LOCAL PROMPT NOTE MANAGER
 
