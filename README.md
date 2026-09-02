@@ -1,119 +1,55 @@
 # 🧠 Smart Black Box #01
 
-# LOCAL PROMPT NOTE MANAGER
+# 🧠 Smart Black Box #01
 
+## LOCAL PROMPT NOTE MANAGER
+
+Phiên bản: v1.1
+
+Khối quản lý Prompt và Note cá nhân trong kiến trúc Smart Black Box.
+
+---
 
 ## 🚀 Live Demo
 
-Try Smart Black Box #01:
+Trải nghiệm trực tiếp:
 
-https://maitheduy.github.io/smart-black-box-prompt-note-manager/LOCAL_PROMPT_NOTE_MANAGER.html
-
-
----
-
-## 📌 Giới thiệu
-
-LOCAL PROMPT NOTE MANAGER là Smart Black Box đầu tiên trong mô hình lập trình theo khối.
-
-Đây là một module phần mềm độc lập dùng để quản lý Prompt và Note cá nhân.
-
-Mục tiêu của module:
-
-- Chuẩn hóa cách lưu trữ Prompt.
-- Hỗ trợ quản lý tri thức cá nhân.
-- Chuẩn bị nền tảng kết nối với các Smart Black Box khác.
+https://maitheduy.github.io/smart-black-box-prompt-note-manager/LOCAL_PROMPT_NOTE_MANAGER_v1_1.html
 
 
 ---
 
-## ✨ Chức năng
+# 🔗 Smart Black Box Architecture
+
+## Smart Black Box #01
+### Local Prompt Note Manager
+
+Chức năng:
 
 - Quản lý Prompt cá nhân.
-- Tạo và quản lý ghi chú.
-- Phân loại nội dung.
-- Tìm kiếm dữ liệu.
-- Lưu trữ dữ liệu bằng Local Storage trên trình duyệt.
-
+- Lưu trữ dữ liệu Local Storage.
+- Xuất / nhập dữ liệu JSON.
+- Chuẩn hóa dữ liệu đầu vào cho các khối tiếp theo.
 
 ---
 
-## 🏗️ Kiến trúc Smart Black Box
+## Smart Black Box #02
+### Cloud Database Layer
 
+Mục tiêu:
 
-```
-USER
+- Kết nối dữ liệu từ Smart Black Box #01 lên Cloud.
+- Đồng bộ dữ liệu nhiều thiết bị.
+- Quản lý dữ liệu tập trung.
+- Chuẩn bị nền tảng kết nối AI Agent.
 
- ↓
+Công nghệ dự kiến:
 
-LOCAL PROMPT NOTE MANAGER
+- Supabase
+- PostgreSQL
+- REST API
+- Authentication
 
- ↓
-
-LOCAL STORAGE
-```
-
-
-Module hoạt động độc lập và có khả năng tái sử dụng.
-
-Trong tương lai có thể kết nối với các Smart Black Box khác thông qua các giao diện kết nối.
-
-
----
-
-## 🧩 Phiên bản
-
-Current Version:
-
-```
-v1.0.0
-```
-
-
-Status:
-
-```
-Stable Release
-```
-
-
----
-
-## 🛣️ Roadmap
-
-
-### Smart Black Box Series
-
-
-[x] Smart Black Box #01  
-LOCAL PROMPT NOTE MANAGER
-
-
-[ ] Smart Black Box #02  
-CLOUD DATABASE SMART BLACK BOX
-
-
-[ ] Smart Black Box #03  
-AI RAG KNOWLEDGE BOX
-
-
-[ ] Smart Black Box #04  
-AGENTIC SMART BOX
-
-
-
----
-
-## 🛠️ Công nghệ sử dụng
-
-- HTML
-- JavaScript
-- Browser Local Storage
-- Git
-- GitHub Pages
-
-
----
 
 ## 📄 License
 
